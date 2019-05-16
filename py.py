@@ -12,6 +12,7 @@ import pandas as pd
 import os
 from xlutils.copy import copy
 import math
+import youxian
 
 # 根据编号读新闻
 filepath = 'news.xls'
@@ -33,8 +34,8 @@ user_times=user_times[0:4]+'-'+user_times[5:7]+'-'+user_times[8:10]
 
 #限制词汇
 new_file = xlrd.open_workbook(user_fpath)
-
-sheet = new_file.sheet_by_name(sheet[0])
+sheets = new_file.sheet_names()  # 获取表中所有表格数据
+sheet = new_file.sheet_by_name(sheets[0])
 
 row=sheet.nrows
 
@@ -72,6 +73,8 @@ out_text={}#文章
 out_title={}#标题
 out_time={}#时间
 num_list=0
+level={}
+out_level={}
 
 for i in range(1,num):
     strout[i] = str(time[i])
@@ -82,9 +85,10 @@ for i in range(1,num):
     strout[i]=times
     sim={}
     count=0#关键词计数
+    flag = 0
+    level[i] = youxian.youxianji(times,user_times,flag)#判断新闻优先级
     try:
-        if int(times[8:10]) - int(user_times[-2::]) > -2 and int(times[8:10]) - int(
-                user_times[-2::]) < 2:  # 用户最后一次浏览时间与新闻的时间判断 2
+        if level[i]!=9999:
             # 符合时间的标准
             keyword = TFIDF.tfidf(text[i])
             for line in keyword:
@@ -110,12 +114,12 @@ for i in range(1,num):
                 out_text[num_list] = text[i]
                 out_title[num_list] = title[i]
                 out_time[num_list] = strout[i]
+                out_time[num_list]=level[i]
     except ValueError:
         continue
 path='new_list.xls'
 
-print(out_text)
-print(out_title)
+
 workbook = xlrd.open_workbook(path,formatting_info=True)  # 打开
 sheets = workbook.sheet_names()  # 获取表中所有表格数据
 worksheet = workbook.sheet_by_name(sheets[0])
@@ -134,6 +138,7 @@ try:
       rows_old =worksheet.nrows
       new_worksheet.write(i+rows_old, 0, out_title[key].value)
       new_worksheet.write(i + rows_old, 1, out_text[key].value)
+      new_worksheet.write(i+rows_old,2,out_level[key].value)
       i+=1
 
 except KeyError:
